@@ -6,10 +6,11 @@
 ##  jH 2019.2.4
 ##
 
+
 #### Parameters ####
 set.seed(123)
 n <- 100        # Dataset size
-k.trials <- 80  # Number of queries
+k.trials <- 101  # Number of queries <- fewer observations than variables <- could add some regularization
 q.size <- 30    # subset size   
 addPrior <- FALSE
 
@@ -20,20 +21,26 @@ addPrior <- FALSE
 #sensitiveData <- rbinom(n, size=1, prob=my.pi)
 
 ## But here we read it from the repository:
-pums <- read.csv(file="../../data/PUMS5extract10000.csv")
-var <- "latino"
+getwd()
+setwd("/Users/lipikaramaswamy/Documents/Harvard/CS208/cs208_lr/examples/wk1_attacks/")
+
+pums <- read.csv("../../data/PUMS5extract10000.csv")
+var <- "educ"
 my.pi <- mean(pums[,var])
-sampleIndex <- sample(x=1:nrow(pums), size=n, replace = FALSE )
+sampleIndex <- sample(x=1:nrow(pums), size=n, replace = FALSE )  ## Sample function only works on a vector  
+                                                                ##- so to sample from a dataframe, sample the indices 
 sensitiveData <- pums[sampleIndex, var]
 
 
 #### Here is our seemingly innocuous aggregated query ####
 query <- function(n, data){
-	index <- sample(1:length(data), n)
+	index <- sample(1:length(data), n)  
 	subset <- data[index]
 	sum <- sum(subset) #+ rnorm(n=1, mean=0, sd=0.1)
 	return(list(sum=sum, index=index))
 }
+
+## PSET = bootstrap but add replace = TRUE
 
 
 #### Here we run our query repeatedly and record results ####
@@ -50,6 +57,9 @@ for(i in 1:k.trials){
 s <- max(100 - k.trials, 0)
 x <- matrix(rbinom(s*n, size=1, prob=0.5), nrow=s, ncol=n)
 y <- apply(x, 1, sum)*my.pi
+
+## Extra data i'm adding on resembles the world as i believed it to be before i had any data
+
 
 if(addPrior){
 	prior <- matrix(NA, nrow=s, ncol=n+1)
@@ -74,6 +84,7 @@ print(formula)
 output <- lm(formula, data=releaseData)                   # run the regression
 estimates <- output$coef                                  # save the estimates
 
+## LM estimates a value bw 0 and 1 -- Rounding is happening in the measurement of success 
 
 #### Plot results ####
 delta <- 0.05                                             # Slight disturbance to add
@@ -98,6 +109,7 @@ text(x=0.5, y=0.2, labels=paste("fraction zeros correct: ", true0.frac), pos=2)
 dev.copy2pdf(file="./figs/regAttack.pdf")
 
 
+## in the case where more betas than observations, R naturally doesn't estimate some of the values
 
 
 
