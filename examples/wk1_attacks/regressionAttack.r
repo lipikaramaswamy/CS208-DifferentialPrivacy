@@ -10,7 +10,7 @@
 #### Parameters ####
 set.seed(123)
 n <- 100        # Dataset size
-k.trials <- 101  # Number of queries <- fewer observations than variables <- could add some regularization
+k.trials <- 100  # Number of queries <- fewer observations than variables <- could add some regularization
 q.size <- 30    # subset size   
 addPrior <- FALSE
 
@@ -25,7 +25,7 @@ getwd()
 setwd("/Users/lipikaramaswamy/Documents/Harvard/CS208/cs208_lr/examples/wk1_attacks/")
 
 pums <- read.csv("../../data/PUMS5extract10000.csv")
-var <- "educ"
+var <- "black"
 my.pi <- mean(pums[,var])
 sampleIndex <- sample(x=1:nrow(pums), size=n, replace = FALSE )  ## Sample function only works on a vector  
                                                                 ##- so to sample from a dataframe, sample the indices 
@@ -59,7 +59,6 @@ x <- matrix(rbinom(s*n, size=1, prob=0.5), nrow=s, ncol=n)
 y <- apply(x, 1, sum)*my.pi
 
 ## Extra data i'm adding on resembles the world as i believed it to be before i had any data
-
 
 if(addPrior){
 	prior <- matrix(NA, nrow=s, ncol=n+1)
@@ -100,7 +99,8 @@ true1.frac <- round(sum(true.1, na.rm=TRUE)/sum(sensitiveData)*100)/100
 true0.frac <- round(sum(true.0, na.rm=TRUE)/sum(1-sensitiveData)*100)/100
 truth.col<-1 + true.1 + true.0
 
-plot(x=estimates + jitterx, y=sensitiveData + jittery, xlab="estimate", ylab="sensitive value", main="Reconstruction of Latino Variable", col=col.values[truth.col])    # Plot reconstruction against actual sensitive data
+plot(x=estimates + jitterx, y=sensitiveData + jittery, xlab="estimate", ylab="sensitive value", main="Reconstruction of Latino Variable", col=col.values[truth.col])    
+# Plot reconstruction against actual sensitive data
 abline(v=0.5, lty=2)
 text(x=0.5, y=0.8, labels=paste("fraction ones correct: ", true1.frac), pos=4)
 text(x=0.5, y=0.2, labels=paste("fraction zeros correct: ", true0.frac), pos=2)

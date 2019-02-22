@@ -16,7 +16,7 @@ k.attributes <- 100
 n.sims<- 10000
 n.samples <- 10
 null.sims <- 1000
-
+ 
 ## Generate underlying population attributes
 population.prob <- runif(n=k.attributes, min=0, max=1)
 population.mean <- 2*(population.prob-0.5)              # Because we are recoding to {-1,1} in next function
@@ -73,7 +73,8 @@ nullDistribution <- function(null.sims=1000, alpha=0.05, fun, population.prob){
 showdist <- function(x,criticalvalue, main="", bw="nrd0"){
 	testdens <- density(x, bw=bw)
 	plot(testdens, main=main, xlab="Test Statistic")
-	semi.blue <- rgb(0,90,239,180,maxColorValue=255)          # Slightly transparent colors
+	semi.blue <- rgb(0,90,239,180,maxColorValue=255)     
+	# Slightly transparent colors
 	semi.red  <- rgb(239,90,0,180,maxColorValue=255)
 	flag <- testdens$x < criticalvalue
 	polygon( c(min(testdens$x), testdens$x[flag], criticalvalue), y=c(0, testdens$y[flag], 0), col=semi.blue)
