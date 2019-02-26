@@ -101,10 +101,11 @@ sgn <- function(x) {
 
 
 library("foreign")
-PUMSdata <- read.csv(file="../../data/FultonPUMS5full.csv")   
+setwd("/Users/lipikaramaswamy/Documents/Harvard/CS208/cs208_lr/")
+
+PUMSdata <- read.csv(file="data/FultonPUMS5full.csv")   
 
 data <- PUMSdata$educ    		# variable for means
-
 data.x <- PUMSdata$educ			# x-variable for regression
 data.y <- PUMSdata$income		# y-variable for regression
 
@@ -131,16 +132,18 @@ bootstrap <- function(x, y=NULL, n){
 }
 
 ## Differentially private mean release
-meanRelease <- function(x, epsilon){
+meanRelease <- function(x, lower, upper, epsilon){
 	n <- length(x)
-	lower <- min(x) 
-	upper <- max(x) 
+	# lower <- min(x) 
+	# upper <- max(x) 
 
 	sensitivity <- (upper - lower)/n
 	scale <- sensitivity / epsilon
 
 	x.clipped <- clip(x, lower, upper)
-	sensitiveValue <- mean(x.clipped)
+	sensitiveValue <- mean(x.clipped) ## could be biased - if you always have income that's higher than the uppper bound, 
+	                                  ##you're removing that data an dending up with a smaller mean
+
 	DPrelease <- sensitiveValue + rlap(mu=0, b=scale, size=1)
 
 	return(list(release=DPrelease, true=sensitiveValue))
@@ -167,7 +170,7 @@ regressionRelease <- function(y, x, ylower, yupper, xlower, xupper, epsilon){
 	return(list(release=postprocess.beta, true=sensitiveValue))
 }
 
-n.sims <- 10												# number of simulations to run
+n.sims <- 1000												# number of simulations to run
 
 my.seq <- seq(from=log10(200), to=log10(1500), length=20)  	# make evenly spaced in logarithmic space
 n.seq  <- round(10^my.seq)                                 	# round to integers
@@ -189,7 +192,7 @@ for(i in 1:length(n.seq)){
 
 			## Mean release
 			bootdata <- bootstrap(x=data, n=n.seq[i])
-			DPmean <- meanRelease(x=bootdata, epsilon=ep.seq[j])
+			DPmean <- meanRelease(x=bootdata, epsilon=ep.seq[j], upper = 15, lower = 1)
 			release <- DPmean$release
 			sampleTrue <- DPmean$true
 
@@ -253,8 +256,8 @@ for(j in 1:length(ep.seq)){
 }
 
 ## Overlay the standard error of the mean
-#se <- sd(PUMSdata$educ)/sqrt(n.seq)
-#lines(n.seq, se, col="red", lty=2, lwd=2)
+se <- sd(PUMSdata$educ)/sqrt(n.seq)
+lines(n.seq, se, col="red", lty=2, lwd=2)
 
 dev.copy2pdf(file="./figs/meanReleases.pdf")
 

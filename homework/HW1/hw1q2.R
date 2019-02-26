@@ -22,6 +22,13 @@ n <- 100
 ### ALL THINGS DATA - Read in, subset, set aside sensitive data ###
 setwd("/Users/lipikaramaswamy/Documents/Harvard/CS208/cs208_lr/")
 
+
+## read in population
+population <- read.csv('data/FultonPUMS5full.csv')
+mean.uscitizen.true = mean(population$uscitizen)
+
+
+## read in sample
 pums <- read.csv("data/FultonPUMS5sample100.csv")
 
 # subset data to that which is available to attacker
@@ -112,6 +119,7 @@ parameter.range <- seq(from=1, to=100, by=1)
 RMSE.matrix <- matrix (, nrow = 100, ncol = 10)
 acc.matrix <- matrix (, nrow = 100, ncol = 10)
 
+### Run attack for ROUNDING
 for(b in 1:10){
   
   for(a in parameter.range){
@@ -133,7 +141,7 @@ for(b in 1:10){
     estimates.rounding <- output.rounding$coef
     
     RMSE.matrix[a,b] <- postResample(history.rounding[,1], history.rounding[,2])[1]
-    correct.preds <- ((estimates.gaussian>0.5) == sensitive.data)  
+    correct.preds <- ((estimates.rounding>0.5) == sensitive.data)  
     acc.matrix[a,b] <- sum(correct.preds)/100
 
   }
@@ -143,18 +151,17 @@ for(b in 1:10){
 
 }
 
+### Run attack for GAUSSIAN NOISE
 
 for(b in 1:10){
-
   for(a in parameter.range){
     ## build matrix for regression
-    
     for(i in 1:k.trials){
       res <- runQuery(df=available.pums, gaussian = TRUE, gaussian.sigma = a)
-      indicator <- 1:n %in% res$index                         # convert indices into a series of boolean/dummy variables
+      indicator <- 1:n %in% res$index                    
       indicator <- as.numeric(indicator)
       history.gaussian[i,] <- c(res$truesum, res$sum, indicator)
-    }
+      }
     
     ## Convert matrix into data frame
     release.data.gaussian <- as.data.frame(history.gaussian[,2:102])             
@@ -166,17 +173,13 @@ for(b in 1:10){
     
     RMSE.matrix[a,b] <- postResample(history.gaussian[,1], history.gaussian[,2])[1]
     correct.preds <- (estimates.gaussian>0.5) & (sensitive.data==1) | (estimates.gaussian<0.5) & (sensitive.data==0)  
-    acc.matrix[a,b] <- sum(correct.preds)/100
-    
-    # estimated
-    # correct.preds1 <- ((estimates.gaussian>0.5) == sensitive.data) 
-    # acc.matrix1[a,b] <- sum(correct.preds1)/100    
-  }
+    acc.matrix[a,b] <- sum(correct.preds)/100}
   
   RMSE.gaussian <-rowMeans(RMSE.matrix)
   acc.gaussian <-rowMeans(acc.matrix)
 }
 
+### Run attack for SUBSAMPLING
 
 for(b in 1:10){
   
@@ -209,7 +212,8 @@ for(b in 1:10){
 }
 
 
-## PLOT Results 
+## PLOT RESULTS 
+
 rounding.for.plots = data.frame(parameter.range, RMSE.rounding, acc.rounding)
 
 p1 <- ggplot(rounding.for.plots, aes(x = parameter.range, y = RMSE.rounding)) + 
@@ -226,6 +230,7 @@ p2 <- ggplot(rounding.for.plots, aes(x = parameter.range, y = acc.rounding)) +
 
 p3 <- ggplot(rounding.for.plots, aes(x = RMSE.rounding, y = acc.rounding)) + 
   geom_point() +
+  geom_hline(yintercept = 0.5, color = "darkcyan") +
   labs(x = "RMSE", y = 'Accuracy', title = 'Accuracy vs. RMSE') + 
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -233,23 +238,23 @@ plots.rounding = grid.arrange(p1, p2, p3, nrow = 1)
 
 ggsave(filename = 'rounding_plots.pdf', plot = plots.rounding, width = 11, height = 5, units = 'in')
 
-### 
 
 gaussian.for.plots = data.frame(parameter.range, RMSE.gaussian, acc.gaussian)
 
 p4 <- ggplot(gaussian.for.plots, aes(x = parameter.range, y = RMSE.gaussian)) + 
   geom_point() +
-  labs(x = "R", y = 'RMSE', title = 'Root Mean Squared Error (RMSE)') + 
+  labs(x = expression(paste(sigma)), y = 'RMSE', title = 'Root Mean Squared Error (RMSE)') + 
   theme(plot.title = element_text(hjust = 0.5))
 
 p5 <- ggplot(gaussian.for.plots, aes(x = parameter.range, y = acc.gaussian)) + 
   geom_point() +
   geom_hline(yintercept = 0.5, color = "darkcyan") +
-  labs(x = "R", y = 'Accuracy', title = 'Accuracy') + 
+  labs(x = expression(paste(sigma)), y = 'Accuracy', title = 'Accuracy') + 
   theme(plot.title = element_text(hjust = 0.5))
 
 p6 <- ggplot(gaussian.for.plots, aes(x = RMSE.gaussian, y = acc.gaussian)) + 
   geom_point() +
+  geom_hline(yintercept = 0.5, color = "darkcyan") +
   labs(x = "RMSE", y = 'Accuracy', title = 'Accuracy vs. RMSE') + 
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -261,17 +266,18 @@ subsamp.for.plots = data.frame(parameter.range, RMSE.subsamp, acc.subsamp)
 
 p7 <- ggplot(subsamp.for.plots, aes(x = parameter.range, y = RMSE.subsamp)) + 
   geom_point() +
-  labs(x = "R", y = 'RMSE', title = 'Root Mean Squared Error (RMSE)') + 
+  labs(x = "t", y = 'RMSE', title = 'Root Mean Squared Error (RMSE)') + 
   theme(plot.title = element_text(hjust = 0.5))
 
 p8 <- ggplot(subsamp.for.plots, aes(x = parameter.range, y = acc.subsamp)) + 
   geom_point() +
-  geom_hline(yintercept = 0.5, color = "darkcyan") +
-  labs(x = "R", y = 'Accuracy', title = 'Accuracy') + 
+  geom_hline(yintercept =  0.5, color = "darkcyan") +
+  labs(x = "t", y = 'Accuracy', title = 'Accuracy') + 
   theme(plot.title = element_text(hjust = 0.5))
 
 p9 <- ggplot(subsamp.for.plots, aes(x = RMSE.subsamp, y = acc.subsamp)) + 
   geom_point() +
+  geom_hline(yintercept = 0.5, color = "darkcyan") +
   labs(x = "RMSE", y = 'Accuracy', title = 'Accuracy vs. RMSE') + 
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -279,4 +285,7 @@ plots.subsampling = grid.arrange(p7, p8, p9, nrow = 1)
 
 ggsave(filename = 'subsampling_plots.pdf', plot = plots.subsampling, width = 11, height = 5, units = 'in')
 
-
+### for next question
+# rounding.for.plots[rounding.for.plots$acc.rounding == min(rounding.for.plots$acc.rounding),]
+# gaussian.for.plots[gaussian.for.plots$acc.gaussian == min(gaussian.for.plots$acc.gaussian),]
+# subsamp.for.plots[subsamp.for.plots$acc.subsamp == min(subsamp.for.plots$acc.subsamp),]

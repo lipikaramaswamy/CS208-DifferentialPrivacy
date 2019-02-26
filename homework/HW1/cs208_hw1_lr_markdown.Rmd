@@ -1,0 +1,168 @@
+---
+title: "HW 1: Reidentification, Reconstruction and Membership Attacks"
+author: 
+- "CS 208 Applied Privacy for Data Science, Spring 2019"
+- "Lipika Ramaswamy"
+date: "February 26, 2019"
+
+fontsize: 11pt
+geometry: margin=1in
+
+output:
+  pdf_document:
+    includes:
+    fig_width: 5
+    fig_height: 3.5
+
+---
+
+Note: code for all the problems can be found in the Appendix. R files can be found on Github (hw1q2.R and hw1q3.R) [https://github.com/lipikaramaswamy/cs208_lr/tree/master/homework].
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plyr)
+library(dplyr)
+library(kableExtra)
+
+```
+
+## 1. Reidentification Attack
+
+The PUMS dataset of 25,766 rows contains data for individuals in Georgia (state 13) within the fips code of 13121. There are seven unique public use microdata areas (PUMAs) in this dataset. The other columns in the dataset include age (ranging from 18 to 93), education on a fifteen point scale, income in dollars rounded to the nearest 10, and binary variables for sex, latino, black, asian, married, divorced, uscitizen, children, disability, military service, employed and english ability. 
+
+To construct a record linkage reidentification attack, one approach would be to determine the marginal probability of an individual in the data having each attribute described above, as shown in Table 1. The probability of an individual, A, living in a given PUMA, say 1101 for this example, is also known. Consider an attacker wants to identify A, a disabled divorced Asian female who lives in PUMA 1101 and has good english ability in this dataset. Assuming that the probability of belonging to each group is independent, a simple calculation shows that A is the only person in this dataset of 25,766 with those attributes, and she can be easily identified.
+
+```{r, echo=FALSE}
+
+pums.full <- read.csv('/Users/lipikaramaswamy/Documents/Harvard/CS208/cs208_lr/data/FultonPUMS5full.csv')
+
+pums.binary = select(pums.full, sex, asian,
+                    divorced,disability,
+                    englishability)
+pums.binary[paste("puma", "_1101")] = ifelse(pums.full$puma == 1101, 1, 0)
+kable(colMeans(pums.binary), 
+      caption = "Marginal probabilities of binary columns", digits=2)
+```
+$$\text{Number of individuals with A's attributes in sample} =  (0.53 \times 0.03 \times 0.11 \times 0.22 \times 0.96 \times 0.12) \times 25,766 =  1.14 \approx 1$$ 
+Given that the sample represents 5% of the population of Georgia, we can apply these marginal probabilities to estimate the number of individuals with A's attributes in the population, as below. This shows that there are roughly 23 people in the population with these attributes.
+
+$$\text{Number of individuals with A's attributes in population} =  (0.53 \times 0.03 \times 0.11 \times 0.22 \times 0.96 \times 0.12) \times \left(\frac{25,766}{0.05}\right) $$ 
+$$ =  22.8 \approx 23$$ 
+
+```{r include=FALSE, eval=FALSE}
+(0.53*0.03*0.11*0.22*0.96*0.12)*(25766/0.05)
+```
+
+
+For individuals who might not be as easily identifiable with just a handful of marginal probabilities of attributes and for attributes that may not truly be independent, the joint probabilities of different attributes can be considered to perform a reidentification attack.
+
+## 2. Reconstruction Attack
+
+In this reconstruction attack, an adversary is attempting to learn sensitive information about individuals in the dataset from which aggregates of specified groups are accessible. The sensitive information is whether an individual in the sample of 100 individuals from Fulton County is a US citizen. Based on results seen in class, it is known that when the error added to the answer is less than $\sqrt{n}$, the fraction of recovered bits is $1-o(1)$. The amount of error added was varied, and the impact can be seen in the discussion that follows.
+        
+Below is a description of reconstruction attacks in the face of each defense described above. 
+  
+1. Rounding the sum to the nearest multiple of R for R$\in${1,2,...,100}:
+
+    The results of rounding are shown in Figure 1. 
+
+    As can be seen from the plot of root mean square error (RMSE) for the range of R values, the RMSE increases from zero, sees a slight decline right around R=25, and climbs up, and then decreases around R=50, before continuing to be quite positive. The decrease in RMSE around R=50 is not surprising, given that the sum of US citizen associated with each random subset of the 100 rows were mostly in the range of 40 to 60. 
+    
+    The accuracy of the reconstruction attack was perfect for R=1. Thereafter, there was a decline in accuracy until roughly R=35, then an increase until roughly R=62, followed by a decrease. This trend is in keeping with the trend for RMSE.
+    
+    The plot of accuracy vs. RMSE shows that for reconstruction attacks with a higher accuracy, the RMSE is lower, demonstrating the privacy-utility tradeoff. This makes sense, as the lower the RMSE, i.e. the difference between the true sum and the noisy sum, the higher the ability of the adversary to reconstruct the sensitive bits of individuals in the sample. As RMSE increases, the accuracy of the reconstruction attack decreases, as seen in the plots. 
+    
+    
+\begin{figure}[h!]
+\centering
+\caption{RMSE and accuracy plots for sums returned with rounding defense}
+\includegraphics[width = 1.0\textwidth]{rounding_plots.pdf}
+\end{figure}
+  
+2. Adding Gaussian noise with zero mean and standard deviation $\sigma\in${1,2,...,100} to the sum:
+
+    The results of Gaussian noise are shown in Figure 2. 
+    
+    Adding Gaussian noise to the sum causes the RMSE to increase linearly with the standard deviation, $\sigma$, of the noise added. This makes sense as the sums become large and very different from their true values. 
+    
+    The accuracy of the reconstruction attack started out near perfect for $sigma=1$, and then saw an exponential decay as the standard deviation of the added noise increases. This is quite intuitive as well, given that the sums start to become far from their true value rather quickly.
+    
+    The privacy utility trade off is well demonstrated in this case as well. As the accuracy of the responses decrease, i.e. the privacy improves, the RMSE increases, i.e. the statistics released are not as useful.
+    
+
+\begin{figure}[h!]
+\centering
+\caption{RMSE and accuracy plots for sums returned with rounding defense}
+\includegraphics[width = 1.0\textwidth]{gaussian_plots.pdf}
+\end{figure}
+
+
+\newpage
+
+
+3. Subsampling a set T consisting of t out of the $n=100$ rows, with $t\in${1,2,...,100} and scaling the sum: 
+
+    The results of subsampling are shown in Figure 3. 
+    
+    The RMSE of the reconstruction attack decays somewhat exponentially as the size of the subsample (t) increases. This makes sense as increasing the size of the subsample reduces the distance between the noisy sum and true sum of the sensitive attribute. 
+    
+    The accuracy of the reconstruction attack increases as t increases. This makes sense for the same reason as above. 
+    
+    The privacy-utility trade off is also well demonstrated in this case. As the accuracy of the reconstruction attack decreases, the RMSE increases.
+
+\begin{figure}[h!]
+\centering
+\caption{RMSE and accuracy plots for sums returned with subsampling defense}
+\includegraphics[width = 1.0\textwidth]{subsampling_plots.pdf}
+\end{figure}
+
+
+\newpage
+
+## 3. Membership Attack
+
+Even when reconstruction attacks start to fail (low accuracies around 0.5), membership attacks are still possible. For a membership attack, when $m=n^2$ queries (or attributes), the system can be vulnerable to reconstruction attacks. Here, we found values for the parameters of the defenses explored above where the reconstruction starts to fail. For rounding, R=100 was selected as at this point, the accuracy of the reconstructed sensitive attribute was the lowest (as seen in Figure 1). For Gaussian noise, values of $\sigma$ around 50 start to result in failure to reconstruct. For subsampling, subsets of size less than 5 yield the lowest accuracy. These values were selected going forward to the membership attack, along with values that yielded higher accuracy of reconstruction in the reconstruction attack.
+
+
+Below is a summary of the trends noticed when increasing the number of attributes available for the membership attack under the three different defenses: 
+   
+   
+1. Rounding Defense:
+
+    The true positive rate for the membership attack reaches 100% for R=10 when the number of attributes is around 3000. This is the case when there isn't enough noise for the reconstruction attack to fail completely. Comparing this to the true positive rate for the membership attack with R=100, we find that this reaches 100% around 3,750. This makes sense, as increasing the noise in the returned answer (a) requires more attributes of the individual to be known to reach 100% true positive probability. Thus rounding doesn't work too well as a defense mechanism even for high values of R. These results are visualized in Figure 4.
+
+\begin{figure}[h!]
+\centering
+\caption{True positive rate for membership attack on means with rounding defense}
+\includegraphics[width = 1.0\textwidth]{q3_rounding_R_both.pdf}
+\end{figure}
+
+
+2. Gaussian Noise:
+
+    The true positive rate for the membership attack reaches about 80% for $\sigma=10$ when gaussian noise is included in the returned answer and the number of attributes is 10,000. When $\sigma=45$, which was identified as the point where reconstruction fails, the true positive probability of the membership attack reaches 100% when the number of attributes increases to 3,750. This is interesting, as I would expect the true positive rate to be reached for a higher number of attributes for higher $\sigma$. I'm not sure what's going on here, but given the observation for smaller sigma, I infer that since the true positive probability for the membership attack never reaches 100% even up to 10,000 attributes, which is better than the case for rounding. These results are visualized in Figure 5.
+
+
+\begin{figure}[h!]
+\centering
+\caption{True positive rate for membership attack on means with added Gaussian noise}
+\includegraphics[width = 1.0\textwidth]{q3_gaussian_all.png}
+\end{figure}
+
+
+3. Subsampling: 
+
+    For $t=2$, the true positive rate for this membership attack stays at 2% as attributes are added until we reach number of attributes greater than 9000, when it jumps to 3%. This makes sense as the answers returned by this mechanism are so noisy when we are only subsampling two rows of data, that it's hard to ever determine whether Alice is in the sample or not based on our test statistic. When the size of the subsample is increased to 50, the plot looks a lot more similar to what was viewed in the other two cases, where the true positive probability reaches 0.5 when the number of attributes increases past 2500. Thus subsampling is proving to be the best defense mechanism for small values of t, though it is worth noting that the utility of the answers is very poor given the small subsample size. These results are visualized in Figure 6.
+
+\begin{figure}[h!]
+\centering
+\caption{True positive rate for membership attack on means with added Gaussian noise}
+\includegraphics[width = 1.0\textwidth]{q3_subsamp_t_all.pdf}
+\end{figure}
+
+
+\newpage
+
+4. Project ideas:
+
+    I am particularly interested in working on privacy in the context of machine learning algorithms. Specifically, I found a paper by Abadi et al. [https://arxiv.org/pdf/1607.00133.pdf] that discuss neural nets trained on stochastic gradient descent, and privacy-preserving versions of the algorithm that model the privacy loss as a random variable. It would be interesting to implement this. I was also intrigued by our discussion of Reza Shokri's slides on memberbership inference attacks, and Ariel's comment that her lab had not been able to replicate their results. I looked up more of his work and found a recent paper on white-box inference attacks[https://www.comp.nus.edu.sg/~reza/files/Shokri-SP2019.pdf]. I think it could be really interesting to attemp to replicate their methodology and if not, try to understand what makes it difficult. Looking forward to your feedback on these ideas!
