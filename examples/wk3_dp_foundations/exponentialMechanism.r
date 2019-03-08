@@ -36,7 +36,8 @@ bootstrap <- function(x, y=NULL, n){
 ## Load the data
 
 library("foreign")
-PUMSdata <- read.csv(file="../../data/FultonPUMS5full.csv")   
+setwd("/Users/lipikaramaswamy/Documents/Harvard/CS208/cs208_lr/")
+PUMSdata <- read.csv(file="data/FultonPUMS5full.csv")   
 data <- PUMSdata$educ    		# variable for means
 populationTrue <- median(data)
 
@@ -53,12 +54,12 @@ medianRelease <- function(x, lower, upper, nbins=0, epsilon){
 
 	quality <- rep(NA, nbins)
 	for(i in 1:length(quality)){
-		quality[i] <- 1                 # Correct this
+		quality[i] <- min(sum(x.clipped <= bins[i]), sum(x.clipped >= bins[i]))                # this is utility FIXED IN CLASS
 	}
-	likelihoods <- exp(epsilon * quality) / 2
+	likelihoods <- exp(epsilon * quality / 2)
 	probabilities <- likelihoods/sum(likelihoods)
     
-    flag <- runif(n=1, min=0, max=1) < cumsum(probabilities) # See also rmultinom()
+    flag <- runif(n=1, min=0, max=1) < cumsum(probabilities) # See also rmultinom() ## alternative to using a multinomial dist
     DPrelease <- min(bins[flag]) 
 
     return(list(release=DPrelease, true=sensitiveValue))
@@ -71,7 +72,7 @@ x <- data[sample.index]
 
 history <- rep(NA, n.sims)
 for(i in 1:n.sims){
-	history[i] <- medianRelease(x=x, lower=1, upper=16, epsilon=1)$release
+	history[i] <- medianRelease(x=x, lower=1, upper=16, epsilon=0.1)$release
 }
 
 par(mfcol=c(2,1))
@@ -199,5 +200,5 @@ for(j in 1:length(ep.seq)){
 }
 abline(h=0.5, lty=2)
 
-dev.copy2pdf(file="./figs/medianRelease.pdf")
+# dev.copy2pdf(file="./figs/medianRelease.pdf")
 

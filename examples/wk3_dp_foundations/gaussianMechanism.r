@@ -73,7 +73,7 @@ laplaceMeanRelease <- function(x, lower, upper, epsilon){
 
 
 ## Differentially private mean release using Gaussian mechanism
-gaussianMeanRelease <- function(x, lower, upper, epsilon, delta){
+gaussianMeanRelease <- function(x, lower, upper, epsilon, delta){ ## have to add extra probability loss parameter
 
 	n <- length(x)
 	sensitivity <- (upper - lower)/n

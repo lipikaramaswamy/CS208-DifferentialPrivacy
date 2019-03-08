@@ -101,7 +101,10 @@ sgn <- function(x) {
 
 
 library("foreign")
-PUMSdata <- read.csv(file="../../data/FultonPUMS5full.csv")   
+
+setwd("/Users/lipikaramaswamy/Documents/Harvard/CS208/cs208_lr/")
+
+PUMSdata <- read.csv(file="data/FultonPUMS5full.csv")   
 data <- PUMSdata$educ    		# variable for means
 populationTrue <- mean(data)
 
@@ -131,9 +134,9 @@ ciPostProcess <- function(release, n, lower, upper, epsilon, alpha=0.05){
 	sensitivity <- (upper - lower)/n
 	scale <- sensitivity / epsilon
 
-	ci.radius <- 1 # Adjust this
-	ci.lower.bound <- release - 1 # Adjust this 
-	ci.upper.bound <- release + 1 # Adjust this 
+	ci.radius <-qlap(1- (alpha/2), b = scale)
+	ci.lower.bound <- release - ci.radius # Adjust this 
+	ci.upper.bound <- release + ci.radius # Adjust this 
 
 	return(list(ciLower=ci.lower.bound, ciUpper=ci.upper.bound))
 }
@@ -165,6 +168,10 @@ for(i in 1:n.sims){
 	history[i,3] <- as.numeric(DPmean$ci$ciLower < true) + as.numeric(DPmean$ci$ciUpper > true)  # what values can this take?
 }
 
+## change epsilon, increase, then conf interval gets smaller
+## increase n, GS decreases, scale of Lap decreases, then conf int gets smaller 
+
+## but in both cases above nothing changes 
 
 
 ci.min<- min(history[,1])
@@ -199,7 +206,9 @@ for(i in 1:length(ep.seq)){
 		rawcount <- rawcount + 1
 		bootdata <- bootstrap(x=data, n=myn)
 		DPmean <- meanRelease(x=bootdata, lower=1, upper=16, epsilon=ep.seq[i])
-		coversTrue<- (DPmean$ci$ciLower < populationTrue) & (DPmean$ci$ciUpper > populationTrue)
+		# coversTrue<- (DPmean$ci$ciLower < populationTrue) & (DPmean$ci$ciUpper > populationTrue) 
+		##  ^^^^ This is an estimate of teh sample mean, not the population mean so fixed
+		coversTrue<- (DPmean$ci$ciLower < DPmean$true) & (DPmean$ci$ciUpper > DPmean$true)		
 		coverage <- c(coverage, coversTrue)
 
 		rawhistory[rawcount,1] <- DPmean$ci$ciLower
@@ -227,7 +236,7 @@ for(i in 1:length(n.seq)){
 		rawcount <- rawcount + 1
 		bootdata <- bootstrap(x=data, n=n.seq[i])
 		DPmean <- meanRelease(x=bootdata, lower=1, upper=16, epsilon=myepsilon)
-		coversTrue<- (DPmean$ci$ciLower < populationTrue) & (DPmean$ci$ciUpper > populationTrue)
+		coversTrue<- (DPmean$ci$ciLower < DPmean$true) & (DPmean$ci$ciUpper > DPmean$true)
 		coverage <- c(coverage, coversTrue)
 
 		rawhistory[rawcount,1] <- DPmean$ci$ciLower
@@ -247,7 +256,7 @@ abline(h=0.95, lwd=2, lty=2, col="red")
 plot(x=agghistory2[,1], y=agghistory2[,2], log="x", type="l", ylim=c(0.5,1), lwd=2, col="black", xlab="sample size n", ylab="coverage", main="Fraction Confidence Intervals Containing True Value")
 abline(h=0.95, lwd=2, lty=2, col="red")
 
-dev.copy2pdf(file="./figs/ciCoverage2.pdf")
+dev.copy2pdf(file="figs/ciCoverage2.pdf")
 
 
 
