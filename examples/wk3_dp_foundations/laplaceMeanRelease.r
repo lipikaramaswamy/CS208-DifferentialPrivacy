@@ -141,8 +141,8 @@ meanRelease <- function(x, lower, upper, epsilon){
 	scale <- sensitivity / epsilon
 
 	x.clipped <- clip(x, lower, upper)
-	sensitiveValue <- mean(x.clipped) ## could be biased - if you always have income that's higher than the uppper bound, 
-	                                  ##you're removing that data an dending up with a smaller mean
+	sensitiveValue <- mean(x.clipped) ## could be biased - if you always have income that's higher than the upper bound, 
+	                                  ##you're removing that data and ending up with a smaller mean
 
 	DPrelease <- sensitiveValue + rlap(mu=0, b=scale, size=1)
 
