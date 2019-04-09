@@ -1,5 +1,6 @@
 # cs208
-Repository for CS208: Applied Privacy for Data Science
+
+Lipika's repository for CS208: Applied Privacy for Data Science
 
 [Course Website](https://people.seas.harvard.edu/~salil/cs208 "CS208 Course Page")
 
